@@ -1,29 +1,19 @@
 # 🤖 AI Interview Coach
 
-An AI-powered interview simulation platform designed to replicate real-world technical and behavioral interview scenarios.
+An AI-driven platform that simulates real interview scenarios with dynamic questioning and structured feedback.
 
----
+## 🚀 Features
+- Role-based interview questions  
+- AI evaluation with scoring & feedback  
+- Follow-up questioning logic  
+- Interview history tracking  
 
-## 🚀 Overview
+## ⚙️ Tech Stack
+- React.js  
+- Node.js & Express  
+- MongoDB  
+- Local LLM integration
 
-This project simulates an interactive interview environment where:
-
-- Dynamic role-based questions are generated using an AI model
-- User responses are evaluated with structured feedback
-- Follow-up questioning logic mimics real interviewer behavior
-- Performance is tracked and stored for later analysis
-
----
-
-## 🧠 Core Features
-
-- 🎯 Role-specific interview flow (Frontend, Backend, Data, etc.)
-- 🔁 Adaptive questioning with contextual follow-ups
-- 📊 Answer evaluation with scoring and feedback
-- 🧩 Non-repetitive question generation logic
-- 🗂️ Interview history tracking (MongoDB)
-- ⚡ Real-time conversational UI
-
----
-
-## 🏗️ System Design (High Level)
+## 🧠 Note
+This project focuses on system design and AI interaction patterns.  
+Some implementation details are simplified for clarity.
