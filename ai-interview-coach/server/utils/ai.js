@@ -1,30 +1,36 @@
-const axios = require("axios");
+const Groq = require("groq-sdk");
+
+const client = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 async function askAI(prompt) {
   try {
-    const res = await axios.post("http://localhost:11434/api/generate", {
-      model: "llama3",
-      prompt,
-      stream: false,
+    console.log("🚀 USING GROQ");
+
+    const response = await client.chat.completions.create({
+      model: "llama-3.1-8b-instant", // ✅ current working model
+      messages: [
+        {
+          role: "system",
+          content: "You are a strict interviewer. Give specific and non-generic feedback."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
     });
 
-    return res.data.response;
+    const content = response.choices[0].message.content;
+
+    console.log("🔥 GROQ RESPONSE:", content);
+
+    return content;
 
   } catch (err) {
-    console.log("❌ AI ERROR:", err.message);
-
-    // ✅ FIXED FALLBACK
-    return `
-Score: 5/10
-Strengths:
-- Basic attempt
-
-Weaknesses:
-- Needs improvement
-
-Suggestions:
-- Practice more
-`;
+    console.log("❌ GROQ ERROR:", err.message);
+    return null;
   }
 }
 

@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Message from "./Message";
 
-const BASE_URL = "https://ai-interview-coach-zi6o.onrender.com";
+// const BASE_URL = "https://ai-interview-coach-zi6o.onrender.com";
+const BASE_URL = "http://localhost:5000";
 
 function Chat() {
   const [messages, setMessages] = useState([]);
@@ -15,36 +16,57 @@ function Chat() {
 
   const chatEndRef = useRef(null);
 
+  // auto scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // 🔥 FIXED QUESTION FETCH
   useEffect(() => {
     if (started) {
+      console.log("Fetching question...");
+
+      setLoading(true);
+
       axios
         .get(`${BASE_URL}/question?role=${role}`)
         .then((res) => {
-          setMessages([{ text: res.data.question, sender: "bot" }]);
-        });
+          console.log("Question:", res.data);
+
+          setMessages([
+            { text: res.data.question, sender: "bot" }
+          ]);
+        })
+        .catch(() => {
+          setMessages([
+            {
+              text: "⚠️ Failed to load question. Try again.",
+              sender: "bot",
+            },
+          ]);
+        })
+        .finally(() => setLoading(false));
     }
   }, [started, role]);
 
+  // SEND MESSAGE
   const sendMessage = async () => {
     if (!input.trim()) return;
 
     const userAnswer = input;
 
-    const userMsg = { text: input, sender: "user" };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [
+      ...prev,
+      { text: input, sender: "user" }
+    ]);
 
     setInput("");
     setLoading(true);
 
     try {
-      const evalRes = await axios.post(
-        `${BASE_URL}/evaluate`,
-        { answer: userAnswer }
-      );
+      const evalRes = await axios.post(`${BASE_URL}/evaluate`, {
+        answer: userAnswer,
+      });
 
       const feedbackMsg = {
         text: evalRes.data.feedback,
@@ -64,6 +86,11 @@ function Chat() {
 
     } catch (err) {
       console.log("ERROR:", err);
+
+      setMessages((prev) => [
+        ...prev,
+        { text: "⚠️ Something went wrong", sender: "bot" }
+      ]);
     }
 
     setLoading(false);
@@ -92,8 +119,12 @@ function Chat() {
 
           <button
             onClick={async () => {
-              await axios.get(`${BASE_URL}/start`);
-              setStarted(true);
+              try {
+                await axios.get(`${BASE_URL}/start`);
+                setStarted(true);
+              } catch {
+                alert("Backend waking up... try again");
+              }
             }}
             style={startBtn}
           >
@@ -106,12 +137,11 @@ function Chat() {
 
   return (
     <div style={mainContainer}>
-      {/* Header */}
       <div style={header}>
         🤖 AI Interview Coach ({role})
       </div>
 
-      {/* Chat */}
+      {/* CHAT */}
       <div style={chatArea}>
         {messages.map((msg, i) => (
           <Message key={i} text={msg.text} sender={msg.sender} />
@@ -122,7 +152,7 @@ function Chat() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input */}
+      {/* INPUT */}
       <div style={inputArea}>
         <div style={inputWrapper}>
           <input
@@ -215,6 +245,8 @@ function Chat() {
     </div>
   );
 }
+
+
 /* 🎨 STYLES */
 
 const mainContainer = {

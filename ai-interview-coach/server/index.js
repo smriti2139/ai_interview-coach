@@ -1,7 +1,27 @@
-let lastAnswer = "";
+require("dotenv").config();
+
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const { askAI } = require("./utils/ai");
+const Interview = require("./models/Interview");
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// 🔥 DB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log("Mongo error:", err));
+
+// 🔥 GLOBAL STATE
+let session = [];
+let previousQuestions = [];
 let currentRole = "software engineer";
 
-require("dotenv").config();
+// 🔥 ROLE TOPICS
 const rolePrompts = {
   "software engineer": "DSA, OOP, system design basics",
   "frontend developer": "React, HTML, CSS, JavaScript",
@@ -12,151 +32,86 @@ const rolePrompts = {
   "hr": "behavioral questions"
 };
 
-const express = require("express");
-const cors = require("cors");
-const { askAI } = require("./utils/ai");
-const Interview = require("./models/Interview");
-
-const app = express();  // ✅ FIRST create app
-const mongoose = require("mongoose");
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log("Mongo error:", err));
-  
-app.use(cors());
-app.use(express.json());
-
-let session = [];
+// 🚀 START
 app.get("/start", (req, res) => {
-  session = [];  // 🔥 reset scores
-  previousQuestions.length = 0;
+  session = [];
+  previousQuestions = [];
   res.json({ message: "Interview started" });
 });
-app.get("/history", async (req, res) => {
-  try {
-    const interviews = await Interview.find().sort({ createdAt: -1 });
-    res.json(interviews);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch history" });
-  }
-});
-let previousQuestions = [];
 
-
-const questionBank = {
-  "software engineer": [
-    "What is OOP?",
-    "Explain REST API.",
-    "What is time complexity?",
-    "Difference between stack and queue?",
-    "What is multithreading?"
-  ],
-  "frontend developer": [
-    "What is React?",
-    "Explain useEffect hook.",
-    "Difference between var, let, const?",
-    "What is DOM?",
-    "What is CSS Flexbox?"
-  ],
-  "backend developer": [
-    "What is Node.js?",
-    "Explain middleware in Express.",
-    "What is JWT?",
-    "What is REST API?",
-    "Difference between SQL and NoSQL?"
-  ],
-  "hr": [
-    "Tell me about yourself.",
-    "Why should we hire you?",
-    "What are your strengths?",
-    "Describe a challenge you faced.",
-    "Where do you see yourself in 5 years?"
-  ]
-};
-
+// 🚀 QUESTION
 app.get("/question", async (req, res) => {
   try {
     currentRole = req.query.role || "software engineer";
 
     const topics = rolePrompts[currentRole].split(",");
-    const randomTopic =
-      topics[Math.floor(Math.random() * topics.length)];
+    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
     let question = await askAI(`
-Ask ONE interview question for ${currentRole}.
+Ask ONE interview question for a ${currentRole} fresher.
 Topic: ${randomTopic}
-Only return the question.
+Keep it short (1 line).
 `);
 
-    // 🔥 AI FAIL → fallback to random bank
-    if (
-  !question ||
-  !question.trim() ||
-  question.toLowerCase().includes("score") ||
-  question.toLowerCase().includes("strength") ||
-  question.length < 10 ||
-  question.includes("\n")
-)
-    {
-      const list = questionBank[currentRole] || questionBank["software engineer"];
-
-      // remove recently asked
-      const filtered = list.filter(q => !previousQuestions.includes(q));
-
-      const randomQ =
-        filtered.length > 0
-          ? filtered[Math.floor(Math.random() * filtered.length)]
-          : list[Math.floor(Math.random() * list.length)];
-
-      question = randomQ;
+    if (!question || question.length < 10) {
+      question = "Tell me about yourself.";
     }
-
-    // store to avoid repetition
-    previousQuestions.push(question);
-    if (previousQuestions.length > 5) previousQuestions.shift();
 
     res.json({ question });
 
   } catch (err) {
     console.log("QUESTION ERROR:", err);
-
-    res.json({
-      question: "Tell me about yourself."
-    });
+    res.json({ question: "Tell me about yourself." });
   }
 });
-// 🎯 2. Evaluate Route
+
+// 🚀 EVALUATE
 app.post("/evaluate", async (req, res) => {
   try {
     const { answer } = req.body;
 
-  if (process.env.NODE_ENV !== "production") {
-  console.log("Answer:", answer);
-}
+    console.log("🔥 EVALUATE API HIT");
 
-    lastAnswer = answer; // 🔥 IMPORTANT
-
-    const prompt = `
-You are an interview evaluator.
-
+    let feedback = await askAI(`
 Evaluate this answer:
 
 "${answer}"
 
-Return:
+Rules:
+- Be strict
+- No generic lines
+- Give specific feedback
+
+Format:
+
 Score: X/10
+
 Strengths:
 - ...
+
 Weaknesses:
 - ...
+
 Suggestions:
 - ...
+`);
+
+    console.log("🔥 FEEDBACK FROM AI:", feedback);
+
+    if (!feedback) {
+      feedback = `
+Score: 5/10
+
+Strengths:
+- Attempted answer
+
+Weaknesses:
+- Lacks depth
+
+Suggestions:
+- Add examples
 `;
-
-    const feedback = await askAI(prompt);
-
-    console.log("AI Feedback:", feedback);
+    }
 
     const scoreMatch = feedback.match(/(\d+)\/10/);
     const score = scoreMatch ? parseInt(scoreMatch[1]) : 5;
@@ -169,35 +124,27 @@ Suggestions:
     console.log("❌ EVALUATE ERROR:", err);
 
     res.json({
-      feedback: "⚠️ AI failed. Try again.",
+      feedback: "⚠️ AI failed",
       score: 5
     });
   }
 });
 
-
+// 🚀 RESULT
 app.get("/result", async (req, res) => {
-  if (session.length === 0) {
-    return res.json({
-      averageScore: 0,
-      totalQuestions: 0
-    });
-  }
-
   const avg =
-    session.reduce((a, b) => a + b, 0) / session.length;
+    session.length > 0
+      ? session.reduce((a, b) => a + b, 0) / session.length
+      : 0;
 
   try {
     await Interview.create({
-      role: currentRole, // you can make dynamic later
+      role: currentRole,
       scores: session,
       averageScore: avg
     });
-
-    console.log("✅ Saved to MongoDB");
-
   } catch (err) {
-    console.log("❌ DB ERROR:", err);
+    console.log("DB ERROR:", err);
   }
 
   res.json({
@@ -206,7 +153,12 @@ app.get("/result", async (req, res) => {
   });
 });
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// 🚀 HISTORY
+app.get("/history", async (req, res) => {
+  const data = await Interview.find().sort({ createdAt: -1 });
+  res.json(data);
+});
+
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
