@@ -30,12 +30,50 @@ app.use(express.json());
 let session = [];
 app.get("/start", (req, res) => {
   session = [];  // 🔥 reset scores
-  previousQuestions = [];
+  previousQuestions.length = 0;
   res.json({ message: "Interview started" });
 });
-
+app.get("/history", async (req, res) => {
+  try {
+    const interviews = await Interview.find().sort({ createdAt: -1 });
+    res.json(interviews);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
 let previousQuestions = [];
 
+
+const questionBank = {
+  "software engineer": [
+    "What is OOP?",
+    "Explain REST API.",
+    "What is time complexity?",
+    "Difference between stack and queue?",
+    "What is multithreading?"
+  ],
+  "frontend developer": [
+    "What is React?",
+    "Explain useEffect hook.",
+    "Difference between var, let, const?",
+    "What is DOM?",
+    "What is CSS Flexbox?"
+  ],
+  "backend developer": [
+    "What is Node.js?",
+    "Explain middleware in Express.",
+    "What is JWT?",
+    "What is REST API?",
+    "Difference between SQL and NoSQL?"
+  ],
+  "hr": [
+    "Tell me about yourself.",
+    "Why should we hire you?",
+    "What are your strengths?",
+    "Describe a challenge you faced.",
+    "Where do you see yourself in 5 years?"
+  ]
+};
 
 app.get("/question", async (req, res) => {
   try {
@@ -45,33 +83,38 @@ app.get("/question", async (req, res) => {
     const randomTopic =
       topics[Math.floor(Math.random() * topics.length)];
 
-    const prompt = `
-You are an interviewer.
-
-Your task:
-- Ask ONLY ONE interview question
-- Do NOT give feedback
-- Do NOT give score
-- Do NOT give explanation
-- Do NOT include words like "Score", "Strengths", "Weaknesses"
-
-Format:
-Just return the question in 1 line.
-
-Role: ${currentRole}
+    let question = await askAI(`
+Ask ONE interview question for ${currentRole}.
 Topic: ${randomTopic}
-`;
+Only return the question.
+`);
 
-    let question = await askAI(prompt);
-
-    // 🧠 SAFETY FILTER (VERY IMPORTANT)
+    // 🔥 AI FAIL → fallback to random bank
     if (
-      !question ||
-      question.includes("Score") ||
-      question.includes("Strengths")
-    ) {
-      question = `Explain ${randomTopic} in simple terms.`;
+  !question ||
+  !question.trim() ||
+  question.toLowerCase().includes("score") ||
+  question.toLowerCase().includes("strength") ||
+  question.length < 10 ||
+  question.includes("\n")
+)
+    {
+      const list = questionBank[currentRole] || questionBank["software engineer"];
+
+      // remove recently asked
+      const filtered = list.filter(q => !previousQuestions.includes(q));
+
+      const randomQ =
+        filtered.length > 0
+          ? filtered[Math.floor(Math.random() * filtered.length)]
+          : list[Math.floor(Math.random() * list.length)];
+
+      question = randomQ;
     }
+
+    // store to avoid repetition
+    previousQuestions.push(question);
+    if (previousQuestions.length > 5) previousQuestions.shift();
 
     res.json({ question });
 
@@ -79,17 +122,8 @@ Topic: ${randomTopic}
     console.log("QUESTION ERROR:", err);
 
     res.json({
-      question: "Tell me about yourself.",
+      question: "Tell me about yourself."
     });
-  }
-});
-app.get("/history", async (req, res) => {
-  try {
-    const interviews = await Interview.find().sort({ createdAt: -1 });
-    res.json(interviews);
-  } catch (err) {
-    console.log("History error:", err);
-    res.status(500).json({ error: "Failed to fetch history" });
   }
 });
 // 🎯 2. Evaluate Route
@@ -97,7 +131,9 @@ app.post("/evaluate", async (req, res) => {
   try {
     const { answer } = req.body;
 
-    console.log("Answer received:", answer);
+  if (process.env.NODE_ENV !== "production") {
+  console.log("Answer:", answer);
+}
 
     lastAnswer = answer; // 🔥 IMPORTANT
 
