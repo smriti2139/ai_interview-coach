@@ -215,5 +215,142 @@ function Chat() {
     </div>
   );
 }
+/* 🎨 STYLES */
 
+const mainContainer = {
+  height: "100vh",
+  display: "flex",
+  flexDirection: "column",
+  background: "#020617",
+  color: "white",
+};
+
+const header = {
+  padding: "15px 25px",
+  borderBottom: "1px solid #1e293b",
+  fontSize: "20px",
+  fontWeight: "bold",
+};
+
+const chatArea = {
+  flex: 1,
+  overflowY: "auto",
+  padding: "20px",
+  maxWidth: "800px",
+  margin: "auto",
+  width: "100%",
+};
+
+const inputArea = {
+  borderTop: "1px solid #1e293b",
+  padding: "15px",
+  display: "flex",
+  justifyContent: "center",
+};
+
+const inputWrapper = {
+  display: "flex",
+  width: "800px",
+  gap: "10px",
+};
+
+const inputStyle = {
+  flex: 1,
+  padding: "14px",
+  borderRadius: "10px",
+  border: "none",
+  background: "#1e293b",
+  color: "white",
+};
+
+const btnBlue = {
+  padding: "12px 16px",
+  background: "#3b82f6",
+  border: "none",
+  borderRadius: "8px",
+  color: "white",
+  cursor: "pointer",
+};
+
+const btnRed = {
+  ...btnBlue,
+  background: "#ef4444",
+};
+
+const btnPurple = {
+  ...btnBlue,
+  background: "#9333ea",
+};
+
+const dashboard = {
+  maxWidth: "800px",
+  margin: "20px auto",
+  padding: "20px",
+  background: "#020617",
+  border: "1px solid #1e293b",
+  borderRadius: "12px",
+};
+
+const cards = {
+  display: "flex",
+  gap: "10px",
+};
+
+const card = {
+  flex: 1,
+  background: "#1e293b",
+  padding: "10px",
+  borderRadius: "10px",
+  textAlign: "center",
+};
+
+const feedback = {
+  marginTop: "10px",
+};
+
+const historyBox = {
+  maxWidth: "800px",
+  margin: "20px auto",
+  padding: "20px",
+  background: "#020617",
+  border: "1px solid #1e293b",
+  borderRadius: "12px",
+};
+
+const historyItem = {
+  padding: "10px",
+  borderBottom: "1px solid #1e293b",
+};
+
+const startContainer = {
+  height: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  background: "linear-gradient(135deg, #020617, #0f172a)",
+};
+
+const startCard = {
+  background: "#020617",
+  padding: "40px",
+  borderRadius: "16px",
+  textAlign: "center",
+};
+
+const selectStyle = {
+  width: "100%",
+  padding: "10px",
+  marginTop: "15px",
+};
+
+const startBtn = {
+  marginTop: "20px",
+  padding: "12px",
+  width: "100%",
+  background: "#3b82f6",
+  border: "none",
+  borderRadius: "10px",
+  color: "white",
+  cursor: "pointer",
+};
 export default Chat;
