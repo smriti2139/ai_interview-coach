@@ -38,60 +38,50 @@ let previousQuestions = [];
 
 
 app.get("/question", async (req, res) => {
-  currentRole = req.query.role || "software engineer";
+  try {
+    currentRole = req.query.role || "software engineer";
 
-  const topics = rolePrompts[currentRole].split(",");
-  const randomTopic =
-    topics[Math.floor(Math.random() * topics.length)];
+    const topics = rolePrompts[currentRole].split(",");
+    const randomTopic =
+      topics[Math.floor(Math.random() * topics.length)];
 
-  const isFollowUp = Math.random() < 0.4; // 40% chance
+    const prompt = `
+You are an interviewer.
 
-  const prompt = isFollowUp
-    ? `
-You are a strict interviewer.
+Your task:
+- Ask ONLY ONE interview question
+- Do NOT give feedback
+- Do NOT give score
+- Do NOT give explanation
+- Do NOT include words like "Score", "Strengths", "Weaknesses"
 
-Based on this candidate's answer:
-"${lastAnswer}"
+Format:
+Just return the question in 1 line.
 
-Ask ONE follow-up question to go deeper.
-
-Rules:
-- Ask about edge cases OR real-world usage
-- Make it slightly challenging
-- Keep it short
-
-Only return the question.
-`
-    : `
-You are a professional interviewer.
-
-Ask ONE HIGH-QUALITY interview question for a ${currentRole} fresher.
-
-Rules:
-- Do NOT repeat similar questions
-- Cover different topics each time
-- Mix theory + practical + scenario-based questions
-- Avoid basic textbook questions
-- Make it slightly challenging
-- Keep it short (1-2 lines)
-
-Focus on: ${randomTopic}
-
-Previous questions asked:
-${previousQuestions.join("\n")}
-
-Only return the question.
+Role: ${currentRole}
+Topic: ${randomTopic}
 `;
 
-  const question = await askAI(prompt);
+    let question = await askAI(prompt);
 
-  previousQuestions.push(question);
+    // 🧠 SAFETY FILTER (VERY IMPORTANT)
+    if (
+      !question ||
+      question.includes("Score") ||
+      question.includes("Strengths")
+    ) {
+      question = `Explain ${randomTopic} in simple terms.`;
+    }
 
-  if (previousQuestions.length > 5) {
-    previousQuestions.shift();
+    res.json({ question });
+
+  } catch (err) {
+    console.log("QUESTION ERROR:", err);
+
+    res.json({
+      question: "Tell me about yourself.",
+    });
   }
-
-  res.json({ question });
 });
 app.get("/history", async (req, res) => {
   try {
