@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Message from "./Message";
 
-// const BASE_URL = "https://ai-interview-coach-zi6o.onrender.com";
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://ai-interview-coach-zi6o.onrender.com";
+// const BASE_URL = "http://localhost:5000";
 
 function Chat() {
   const [messages, setMessages] = useState([]);
